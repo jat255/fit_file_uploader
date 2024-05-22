@@ -13,6 +13,9 @@ from a Garmin device, those features will be should be enabled.
 
 ## Installation
 
+Required Python 3.12. If your system python is older than that, I recommend
+using [pyenv](https://github.com/pyenv/pyenv) to manage locally installed versions.
+
 It's probably best to create a new virtual environment:
 
 ```bash
