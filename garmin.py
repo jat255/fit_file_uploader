@@ -176,7 +176,7 @@ def upload_all():
     for f in files:
         _logger.info(f"Processing \"{f}\"")  # type: ignore
         
-        with NamedTemporaryFile() as fp:
+        with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
             output = edit_fit(Path(f), output=Path(fp.name))
             _logger.info(f"Uploading modifed file to Garmin Connect")
             res = upload(output, original_path=Path(f))
