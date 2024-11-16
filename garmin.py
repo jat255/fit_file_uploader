@@ -10,6 +10,9 @@ import os
 import json
 import logging
 import sys
+import time
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
 
 from tempfile import NamedTemporaryFile
 from pathlib import Path
@@ -41,7 +44,7 @@ c = Console()
 
 EDGE830 = GarminProduct.EDGE_830
 GARMIN = Manufacturer.GARMIN
-FILES_UPLOADED = Path('.uploaded_files.json')
+FILES_UPLOADED_NAME = Path('.uploaded_files.json')
 
 class FitFileLogFilter(logging.Filter):
     """Filter to remove specific warning from the fit_tool module"""
@@ -49,6 +52,14 @@ class FitFileLogFilter(logging.Filter):
         res = not '\n\tactual: ' in record.getMessage()
         return res
 logging.getLogger('fit_tool').addFilter(FitFileLogFilter())
+
+class NewFileEventHandler(PatternMatchingEventHandler):
+    def __init__(self):
+        PatternMatchingEventHandler.__init__(self, patterns=['*.fit'],
+                                                             ignore_directories=True, case_sensitive=False)
+    def on_created(self, event) -> None:
+        _logger.debug("New file created - % s." % event.src_path)
+        upload_all(Path(event.src_path).parent.absolute())
 
 def print_message(prefix, message):
     man = Manufacturer(message.manufacturer).name if message.manufacturer in Manufacturer else "BLANK"
@@ -144,24 +155,24 @@ def upload(fn: Path, original_path: Optional[Path] = None):
             else:
                 raise e
     
-def upload_all():
-    if FILES_UPLOADED.exists():
+def upload_all(dir: Path):
+    files_uploaded = dir.joinpath(FILES_UPLOADED_NAME)
+    if files_uploaded.exists():
         # load uploaded file list from disk
-        with FILES_UPLOADED.open('r') as f:
+        with files_uploaded.open('r') as f:
             uploaded_files = json.load(f)
     else:
         uploaded_files = []
-        with FILES_UPLOADED.open('w') as f:
+        with files_uploaded.open('w') as f:
             # write blank file
             json.dump(uploaded_files, f, indent=2)
     _logger.debug(f"Found the following already uploaded files: {uploaded_files}")
-    this_dir = Path('.').parent
-    this_abs_dir = str(this_dir.absolute())
+    abs_dir = str(dir.absolute())
     
     # glob all .fit files in the current directory
-    files = [str(i) for i in this_dir.glob('*.fit', case_sensitive=False)]
+    files = [str(i) for i in dir.glob('*.fit', case_sensitive=False)]
     # strip any leading/trailing slashes from filenames
-    files = [i.replace(this_abs_dir, '').strip('/').strip('\\') for i in files]
+    files = [i.replace(str(dir), '').strip('/').strip('\\') for i in files]
     # remove files matching what we may have already processed
     files = [i for i in files if not i.endswith('_modified.fit')]
     # remove files found in the "already uploaded" list
@@ -177,15 +188,30 @@ def upload_all():
         _logger.info(f"Processing \"{f}\"")  # type: ignore
         
         with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
-            output = edit_fit(Path(f), output=Path(fp.name))
-            _logger.info(f"Uploading modifed file to Garmin Connect")
-            res = upload(output, original_path=Path(f))
+            try:
+                output = edit_fit(Path(f), output=Path(fp.name))
+                _logger.info(f"Uploading modifed file to Garmin Connect")
+                res = upload(output, original_path=Path(f))
+            except:
+                _logger.debug(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
         _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
         uploaded_files.append(f)
     
 
-    with FILES_UPLOADED.open('w') as f:
+    with files_uploaded.open('w') as f:
         json.dump(uploaded_files, f, indent=2)
+
+def daemonise(watch_dir: Path):
+    event_handler = NewFileEventHandler()
+    observer = Observer()
+    observer.schedule(event_handler, watch_dir, recursive=False)
+    observer.start()
+    try:
+        while True:
+            time.sleep(300)
+    finally:
+        observer.stop()
+        observer.join()
 
 if __name__ == '__main__':    
     parser = argparse.ArgumentParser(description="Tool to add Garmin device information to FIT files and upload them to Garmin Connect")
@@ -193,14 +219,19 @@ if __name__ == '__main__':
     parser.add_argument("-u", "--upload", help="upload FIT file (after editing) to Garmin Connect", action="store_true")
     parser.add_argument(
         "-ua", 
-        "--upload-all", 
+        "--upload-all",  
         action="store_true",
         help="upload all FIT files in current directory (if they are not in \"already processed\" list -- will override other all options)"
     )
+    parser.add_argument("-d","--daemonise",help="monitor a directory and  upload all newly created FIT files",action="store_true")
     parser.add_argument('-v', '--verbose', help='increase verbosity of log output', action='store_true')
     args = parser.parse_args()
-    if not args.input_file and not args.upload_all:
-        _logger.error('Specify either "--upload-all" or one input_file to use')
+    if not args.input_file and not (args.upload_all or args.daemonise):
+        _logger.error('Specify either "--upload-all" or one input file/directory to use')
+        parser.print_help()
+        sys.exit(1)
+    if args.daemonise and args.upload_all:
+        _logger.error('Cannot use "--upload-all" and "--daemonise"')
         parser.print_help()
         sys.exit(1)
     if args.verbose:
@@ -212,7 +243,17 @@ if __name__ == '__main__':
         for l in ['urllib3.connectionpool', 'oauthlib.oauth1.rfc5849', 'requests_oauthlib.oauth1_auth']:
             logging.getLogger(l).setLevel(logging.WARNING)
     if args.upload_all:
-        upload_all()
+        if not args.input_file:
+            watch_dir = os.getcwd()
+        else:
+            watch_dir = args.input_file
+        upload_all(Path(watch_dir))
+    elif args.daemonise:
+        if not args.input_file:
+            watch_dir = os.getcwd()
+        else:
+            watch_dir = args.input_file
+        daemonise(Path(watch_dir))
     else:
         p = Path(args.input_file)
         output_path = edit_fit(p)
