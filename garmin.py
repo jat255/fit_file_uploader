@@ -82,7 +82,9 @@ def first_run():
         title = 'First run setup found TP Virtual User directory at ' + str(Path(TPVPath).joinpath(res[0])) + ', is this correct? '
         option, index = pick(['yes', 'no'], title)
         if option == 'no':
-            _logger.error('First setup failed to find correct TP Virtual User folder please manually configure TPV_ID in confiog file: %s', CONFIG_FILE.absolute())
+            _logger.error('First setup failed to find correct TP Virtual User folder please manually configure TPV_ID in config file: %s', CONFIG_FILE.absolute())
+            with CONFIG_FILE.open('w') as f:
+                yaml.dump({'TPV_ID': ''},f)
             sys.exit(1)
         else:
             index=0
@@ -91,9 +93,23 @@ def first_run():
         option, index = pick(res, title)
     TPVIDPath = Path(TPVPath).joinpath(res[index])
     _logger.info(f"Found TP Virtual User directory: {str(TPVIDPath.absolute())}, setting TPV_ID key in config file")
-    print(yaml.dump({'TPV_ID': res[index]}))
     with CONFIG_FILE.open('w') as f:
         yaml.dump({'TPV_ID': res[index]},f)
+
+    email = os.environ.get('GARMIN_USERNAME', None)
+    password = os.environ.get('GARMIN_PASSWORD', None)
+    if not email or not password:
+        title = 'Your environment has not specified your Garmin credentials. For the daemon mode to work these must be available as enriovnment variables in your system, or stored in a local envrionment file. Would you like to store these now? '
+        option, index = pick(['yes', 'no'], title)
+        if option == 'yes':
+            print("Please enter your Garmin Connect username:")
+            user = input()
+            print("Please enter your Garmin Connect password:")
+            password = input()
+            envFileContents = "GARMIN_USERNAME=\'%s\'\nGARMIN_PASSWORD=\'%s\'" % (user,password)
+            with open(".env", "w") as f:
+                f.write(envFileContents)
+            _logger.info(f"Stored Garmin credentials in {str(Path('.env').absolute())}")
 
 def get_date_from_fit(fit_path: Path) -> Optional[datetime]:
     fit_file = FitFile.from_file(str(fit_path))
@@ -230,13 +246,22 @@ def upload_all(dir: Path):
         json.dump(uploaded_files, f, indent=2)
 
 def daemonise(watch_dir: Path):
+    email = os.environ.get('GARMIN_USERNAME', None)
+    password = os.environ.get('GARMIN_PASSWORD', None)
+    if not email or not password:
+        _logger.error('Your environment has not specified your Garmin credentials. For the daemon mode to work these must be available as enriovnment variables in your system, or stored in a local envrionment file.')
+        sys.exit(1)
+        
     event_handler = NewFileEventHandler()
     observer = Observer()
     observer.schedule(event_handler, watch_dir, recursive=False)
     observer.start()
+    _logger.info(f"Monitoring directory: {watch_dir.absolute()}")
     try:
         while True:
             time.sleep(300)
+    except KeyboardInterrupt as e:
+        _logger.info(f"Recieved keyboard interupt, shutting down monitor")
     finally:
         observer.stop()
         observer.join()
