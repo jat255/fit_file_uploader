@@ -144,7 +144,7 @@ def upload(fn: Path, original_path: Optional[Path] = None):
             else:
                 raise e
     
-def upload_all():
+def upload_all(preinitialise: bool):
     if FILES_UPLOADED.exists():
         # load uploaded file list from disk
         with FILES_UPLOADED.open('r') as f:
@@ -176,14 +176,15 @@ def upload_all():
     for f in files:
         _logger.info(f"Processing \"{f}\"")  # type: ignore
         
-        with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
-            output = edit_fit(Path(f), output=Path(fp.name))
-            _logger.info(f"Uploading modifed file to Garmin Connect")
-            res = upload(output, original_path=Path(f))
+        if not preinitialise:
+            with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
+                output = edit_fit(Path(f), output=Path(fp.name))
+                _logger.info(f"Uploading modifed file to Garmin Connect")
+                res = upload(output, original_path=Path(f))
+
         _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
         uploaded_files.append(f)
-    
-
+  
     with FILES_UPLOADED.open('w') as f:
         json.dump(uploaded_files, f, indent=2)
 
@@ -197,9 +198,10 @@ if __name__ == '__main__':
         action="store_true",
         help="upload all FIT files in current directory (if they are not in \"already processed\" list -- will override other all options)"
     )
+    parser.add_argument('-p', '--preinitialise', help='preinitialise the list of processed FIT files based on the current direcotry contents', action='store_true')
     parser.add_argument('-v', '--verbose', help='increase verbosity of log output', action='store_true')
     args = parser.parse_args()
-    if not args.input_file and not args.upload_all:
+    if not args.input_file and not (args.upload_all or args.preinitialise):
         _logger.error('Specify either "--upload-all" or one input_file to use')
         parser.print_help()
         sys.exit(1)
@@ -211,8 +213,8 @@ if __name__ == '__main__':
         _logger.setLevel(logging.INFO)
         for l in ['urllib3.connectionpool', 'oauthlib.oauth1.rfc5849', 'requests_oauthlib.oauth1_auth']:
             logging.getLogger(l).setLevel(logging.WARNING)
-    if args.upload_all:
-        upload_all()
+    if args.upload_all or args.preinitialise:
+        upload_all(args.preinitialise)
     else:
         p = Path(args.input_file)
         output_path = edit_fit(p)
