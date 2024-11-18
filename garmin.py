@@ -221,7 +221,7 @@ def upload_all(dir: Path):
                 _logger.info(f"Uploading modifed file to Garmin Connect")
                 res = upload(output, original_path=Path(f))
             except:
-                _logger.debug(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
+                _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
         _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
         uploaded_files.append(f)
     
@@ -275,13 +275,13 @@ if __name__ == '__main__':
     config = yaml.safe_load(open(CONFIG_FILE))
     if args.upload_all:
         if not args.input_file:
-            watch_dir = os.getcwd()
+            watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID'])
         else:
             watch_dir = args.input_file
         upload_all(Path(watch_dir))
     elif args.daemonise:
         if not args.input_file:
-            watch_dir = os.getcwd()
+            watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID'])
         else:
             watch_dir = args.input_file
         daemonise(Path(watch_dir))
