@@ -13,6 +13,8 @@ import sys
 import time
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
+import yaml
+import re
 
 from tempfile import NamedTemporaryFile
 from pathlib import Path
@@ -20,6 +22,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.logging import RichHandler
+from pick import pick
 
 _logger = logging.getLogger('garmin')
 
@@ -45,6 +48,7 @@ c = Console()
 EDGE830 = GarminProduct.EDGE_830
 GARMIN = Manufacturer.GARMIN
 FILES_UPLOADED_NAME = Path('.uploaded_files.json')
+CONFIG_FILE = Path('.config')
 
 class FitFileLogFilter(logging.Filter):
     """Filter to remove specific warning from the fit_tool module"""
@@ -67,6 +71,30 @@ def print_message(prefix, message):
     _logger.debug(f"{prefix} - manufacturer: {message.manufacturer} (\"{man}\") - "
               f"product: {message.product} - garmin product: {message.garmin_product} (\"{gar_prod}\")")
     
+def first_run():
+    _logger.info(f"Running first time setup")
+    TPVPath = os.path.expanduser('~/TPVirtual')
+    res = [f for f in os.listdir(TPVPath) if re.search(r'\A(\w){16}\Z', f)]
+    if len(res) == 0:
+        _logger.error('Cannot find a TP Virtual User folder in %s, please check if you have previously logged into TP Virtual', TPVPath)
+        sys.exit(1)
+    elif len(res) == 1:
+        title = 'First run setup found TP Virtual User directory at ' + str(Path(TPVPath).joinpath(res[0])) + ', is this correct? '
+        option, index = pick(['yes', 'no'], title)
+        if option == 'no':
+            _logger.error('First setup failed to find correct TP Virtual User folder please manually configure TPV_ID in confiog file: %s', CONFIG_FILE.absolute())
+            sys.exit(1)
+        else:
+            index=0
+    else:
+        title = 'First run setup found multiple TP Virtual User directories, please select the directory for your user: '
+        option, index = pick(res, title)
+    TPVIDPath = Path(TPVPath).joinpath(res[index])
+    _logger.info(f"Found TP Virtual User directory: {str(TPVIDPath.absolute())}, setting TPV_ID key in config file")
+    print(yaml.dump({'TPV_ID': res[index]}))
+    with CONFIG_FILE.open('w') as f:
+        yaml.dump({'TPV_ID': res[index]},f)
+
 def get_date_from_fit(fit_path: Path) -> Optional[datetime]:
     fit_file = FitFile.from_file(str(fit_path))
     res = None
@@ -242,6 +270,9 @@ if __name__ == '__main__':
         _logger.setLevel(logging.INFO)
         for l in ['urllib3.connectionpool', 'oauthlib.oauth1.rfc5849', 'requests_oauthlib.oauth1_auth']:
             logging.getLogger(l).setLevel(logging.WARNING)
+    if not CONFIG_FILE.is_file():
+        first_run()
+    config = yaml.safe_load(open(CONFIG_FILE))
     if args.upload_all:
         if not args.input_file:
             watch_dir = os.getcwd()
