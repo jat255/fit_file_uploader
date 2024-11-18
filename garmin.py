@@ -199,7 +199,7 @@ def upload(fn: Path, original_path: Optional[Path] = None):
             else:
                 raise e
     
-def upload_all(dir: Path):
+def upload_all(dir: Path, preinitialise: bool = False):
     files_uploaded = dir.joinpath(FILES_UPLOADED_NAME)
     if files_uploaded.exists():
         # load uploaded file list from disk
@@ -231,13 +231,14 @@ def upload_all(dir: Path):
     for f in files:
         _logger.info(f"Processing \"{f}\"")  # type: ignore
         
-        with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
-            try:
-                output = edit_fit(Path(f), output=Path(fp.name))
-                _logger.info(f"Uploading modifed file to Garmin Connect")
-                res = upload(output, original_path=Path(f))
-            except:
-                _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
+        if not preinitialise:
+            with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
+                try:
+                    output = edit_fit(Path(f), output=Path(fp.name))
+                    _logger.info(f"Uploading modifed file to Garmin Connect")
+                    res = upload(output, original_path=Path(f))
+                except:
+                    _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
         _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
         uploaded_files.append(f)
     
@@ -276,10 +277,11 @@ if __name__ == '__main__':
         action="store_true",
         help="upload all FIT files in current directory (if they are not in \"already processed\" list -- will override other all options)"
     )
+    parser.add_argument('-p', '--preinitialise', help='preinitialise the list of processed FIT files based on the current direcotry contents', action='store_true')
     parser.add_argument("-d","--daemonise",help="monitor a directory and  upload all newly created FIT files",action="store_true")
     parser.add_argument('-v', '--verbose', help='increase verbosity of log output', action='store_true')
     args = parser.parse_args()
-    if not args.input_file and not (args.upload_all or args.daemonise):
+    if not args.input_file and not (args.upload_all or args.daemonise or args.preinitialise):
         _logger.error('Specify either "--upload-all" or one input file/directory to use')
         parser.print_help()
         sys.exit(1)
@@ -298,12 +300,12 @@ if __name__ == '__main__':
     if not CONFIG_FILE.is_file():
         first_run()
     config = yaml.safe_load(open(CONFIG_FILE))
-    if args.upload_all:
+    if args.upload_all or args.preinitialise:
         if not args.input_file:
             watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID'])
         else:
             watch_dir = args.input_file
-        upload_all(Path(watch_dir))
+        upload_all(Path(watch_dir), args.preinitialise)
     elif args.daemonise:
         if not args.input_file:
             watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID'])
