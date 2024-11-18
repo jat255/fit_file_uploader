@@ -122,7 +122,7 @@ def get_date_from_fit(fit_path: Path) -> Optional[datetime]:
                 break
     return res
 
-def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
+def edit_fit(fit_path: Path, output: Optional[Path] = None, dryrun: bool = False) -> Path:
     fit_file = FitFile.from_file(str(fit_path))
     if not output:
         output = fit_path.parent / f"{fit_path.stem}_modified.fit"
@@ -160,10 +160,11 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
 
     modified_file = builder.build()
     _logger.info(f"Saving modified data to \"{output}\"")
-    modified_file.to_file(str(output))
+    if not dryrun:
+        modified_file.to_file(str(output))
     return output
     
-def upload(fn: Path, original_path: Optional[Path] = None):
+def upload(fn: Path, original_path: Optional[Path] = None, dryrun: bool = False):
     # get credentials and login if needed
     import garth
     from garth.exc import GarthException, GarthHTTPError
@@ -190,7 +191,8 @@ def upload(fn: Path, original_path: Optional[Path] = None):
         
     with fn.open('rb') as f:
         try:
-            upload_result = garth.client.upload(f)
+            if not dryrun:
+                upload_result = garth.client.upload(f)
             _logger.info(f':white_check_mark: Successfully uploaded "{str(original_path)}"')
             return upload_result
         except GarthHTTPError as e:
@@ -199,7 +201,7 @@ def upload(fn: Path, original_path: Optional[Path] = None):
             else:
                 raise e
     
-def upload_all(dir: Path, preinitialise: bool = False):
+def upload_all(dir: Path, preinitialise: bool = False, dryrun: bool = False):
     files_uploaded = dir.joinpath(FILES_UPLOADED_NAME)
     if files_uploaded.exists():
         # load uploaded file list from disk
@@ -236,15 +238,15 @@ def upload_all(dir: Path, preinitialise: bool = False):
                 try:
                     output = edit_fit(Path(f), output=Path(fp.name))
                     _logger.info(f"Uploading modifed file to Garmin Connect")
-                    res = upload(output, original_path=Path(f))
+                    res = upload(output, original_path=Path(f), dryrun=dryrun)
                 except:
                     _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
         _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
         uploaded_files.append(f)
     
-
-    with files_uploaded.open('w') as f:
-        json.dump(uploaded_files, f, indent=2)
+    if not dryrun:
+        with files_uploaded.open('w') as f:
+            json.dump(uploaded_files, f, indent=2)
 
 def daemonise(watch_dir: Path):
     email = os.environ.get('GARMIN_USERNAME', None)
@@ -278,7 +280,8 @@ if __name__ == '__main__':
         help="upload all FIT files in current directory (if they are not in \"already processed\" list -- will override other all options)"
     )
     parser.add_argument('-p', '--preinitialise', help='preinitialise the list of processed FIT files based on the current direcotry contents', action='store_true')
-    parser.add_argument("-d","--daemonise",help="monitor a directory and  upload all newly created FIT files",action="store_true")
+    parser.add_argument('-d','--daemonise',help='monitor a directory and  upload all newly created FIT files',action='store_true')
+    parser.add_argument('--dryrun', help='perform a dry run', action='store_true')
     parser.add_argument('-v', '--verbose', help='increase verbosity of log output', action='store_true')
     args = parser.parse_args()
     if not args.input_file and not (args.upload_all or args.daemonise or args.preinitialise):
@@ -305,7 +308,7 @@ if __name__ == '__main__':
             watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID'])
         else:
             watch_dir = args.input_file
-        upload_all(Path(watch_dir), args.preinitialise)
+        upload_all(Path(watch_dir), args.preinitialise, args.dryrun)
     elif args.daemonise:
         if not args.input_file:
             watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID'])
@@ -314,6 +317,6 @@ if __name__ == '__main__':
         daemonise(Path(watch_dir))
     else:
         p = Path(args.input_file)
-        output_path = edit_fit(p)
+        output_path = edit_fit(p, dryrun=args.dryrun)
         if args.upload:
-            upload(output_path, original_path=p)
+            upload(output_path, original_path=p, dryrun=args.dryrun)
