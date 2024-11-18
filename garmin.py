@@ -67,7 +67,7 @@ def get_date_from_fit(fit_path: Path) -> Optional[datetime]:
                 break
     return res
 
-def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
+def edit_fit(fit_path: Path, output: Optional[Path] = None, dryrun: bool = False) -> Path:
     fit_file = FitFile.from_file(str(fit_path))
     if not output:
         output = fit_path.parent / f"{fit_path.stem}_modified.fit"
@@ -105,10 +105,11 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
 
     modified_file = builder.build()
     _logger.info(f"Saving modified data to \"{output}\"")
-    modified_file.to_file(str(output))
+    if not dryrun:
+        modified_file.to_file(str(output))
     return output
     
-def upload(fn: Path, original_path: Optional[Path] = None):
+def upload(fn: Path, original_path: Optional[Path] = None, dryrun: bool = False):
     # get credentials and login if needed
     import garth
     from garth.exc import GarthException, GarthHTTPError
@@ -135,7 +136,8 @@ def upload(fn: Path, original_path: Optional[Path] = None):
         
     with fn.open('rb') as f:
         try:
-            upload_result = garth.client.upload(f)
+            if not dryrun:
+                upload_result = garth.client.upload(f)
             _logger.info(f':white_check_mark: Successfully uploaded "{str(original_path)}"')
             return upload_result
         except GarthHTTPError as e:
@@ -144,7 +146,7 @@ def upload(fn: Path, original_path: Optional[Path] = None):
             else:
                 raise e
     
-def upload_all():
+def upload_all(dryrun: bool = False):
     if FILES_UPLOADED.exists():
         # load uploaded file list from disk
         with FILES_UPLOADED.open('r') as f:
@@ -179,13 +181,13 @@ def upload_all():
         with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
             output = edit_fit(Path(f), output=Path(fp.name))
             _logger.info(f"Uploading modifed file to Garmin Connect")
-            res = upload(output, original_path=Path(f))
+            res = upload(output, original_path=Path(f), dryrun=dryrun)
         _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
         uploaded_files.append(f)
     
-
-    with FILES_UPLOADED.open('w') as f:
-        json.dump(uploaded_files, f, indent=2)
+    if not dryrun:
+        with FILES_UPLOADED.open('w') as f:
+            json.dump(uploaded_files, f, indent=2)
 
 if __name__ == '__main__':    
     parser = argparse.ArgumentParser(description="Tool to add Garmin device information to FIT files and upload them to Garmin Connect")
@@ -197,6 +199,7 @@ if __name__ == '__main__':
         action="store_true",
         help="upload all FIT files in current directory (if they are not in \"already processed\" list -- will override other all options)"
     )
+    parser.add_argument('-d', '--dryrun', help='perform a dry run', action='store_true')
     parser.add_argument('-v', '--verbose', help='increase verbosity of log output', action='store_true')
     args = parser.parse_args()
     if not args.input_file and not args.upload_all:
@@ -212,9 +215,9 @@ if __name__ == '__main__':
         for l in ['urllib3.connectionpool', 'oauthlib.oauth1.rfc5849', 'requests_oauthlib.oauth1_auth']:
             logging.getLogger(l).setLevel(logging.WARNING)
     if args.upload_all:
-        upload_all()
+        upload_all(dryrun=args.dryrun)
     else:
         p = Path(args.input_file)
-        output_path = edit_fit(p)
+        output_path = edit_fit(p, dryrun=args.dryrun)
         if args.upload:
-            upload(output_path, original_path=p)
+            upload(output_path, original_path=p, dryrun=args.dryrun)
