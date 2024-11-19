@@ -99,7 +99,7 @@ def first_run():
     email = os.environ.get('GARMIN_USERNAME', None)
     password = os.environ.get('GARMIN_PASSWORD', None)
     if not email or not password:
-        title = 'Your environment has not specified your Garmin credentials. For the daemon mode to work these must be available as enriovnment variables in your system, or stored in a local envrionment file. Would you like to store these now? '
+        title = 'Your environment has not specified your Garmin credentials. For the daemon mode to work these must be available as environment variables in your system, or stored in a local environment file. Would you like to store these now? '
         option, index = pick(['yes', 'no'], title)
         if option == 'yes':
             print("Please enter your Garmin Connect username:")
@@ -133,7 +133,7 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None, dryrun: bool = False
     for i, record in enumerate(fit_file.records):
         message = record.message
         
-        # change file id to inidicate file was saved by Edge 830
+        # change file id to indicate file was saved by Edge 830
         if message.global_id == FileIdMessage.ID:
             if isinstance(message, FileIdMessage):
                 dt = datetime.fromtimestamp(message.time_created/1000.0)   # type: ignore
@@ -237,7 +237,7 @@ def upload_all(dir: Path, preinitialise: bool = False, dryrun: bool = False):
             with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
                 try:
                     output = edit_fit(Path(f), output=Path(fp.name))
-                    _logger.info(f"Uploading modifed file to Garmin Connect")
+                    _logger.info(f"Uploading modified file to Garmin Connect")
                     res = upload(output, original_path=Path(f), dryrun=dryrun)
                 except:
                     _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
@@ -252,7 +252,7 @@ def daemonise(watch_dir: Path):
     email = os.environ.get('GARMIN_USERNAME', None)
     password = os.environ.get('GARMIN_PASSWORD', None)
     if not email or not password:
-        _logger.error('Your environment has not specified your Garmin credentials. For the daemon mode to work these must be available as enriovnment variables in your system, or stored in a local envrionment file.')
+        _logger.error('Your environment has not specified your Garmin credentials. For the daemon mode to work these must be available as environment variables in your system, or stored in a local environment file.')
         sys.exit(1)
         
     event_handler = NewFileEventHandler()

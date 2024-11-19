@@ -1,4 +1,4 @@
-# indieVelo to Garmin Connect editor/uploader
+# TrainingPeaks Virtual to Garmin Connect editor/uploader
 
 This repo contains a script `garmin.py` that will edit [FIT](https://developer.garmin.com/fit/overview/) files
 to make them appear to come from a Garmin device (Edge 830, currently) and upload them to Garmin Connect
@@ -140,7 +140,7 @@ process the configured TrainingPeaks Virtual user data folder.
            DEBUG        New Record: 1 - manufacturer: 1 ("GARMIN") - product: 3122 - garmin  garmin.py:56
 ....
 [13:27:00] INFO     Saving modified data to "/tmp/tmpljc9mx67"                               garmin.py:107
-           INFO     Uploading modifed file to Garmin Connect                                 garmin.py:175
+           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
            INFO     Authenticating to Garmin Connect                                         garmin.py:122
            DEBUG    Using username "user"                                                    garmin.py:127
            DEBUG    Using password stored in "GARMIN_PASSWORD"                               garmin.py:132
@@ -154,7 +154,7 @@ process the configured TrainingPeaks Virtual user data folder.
            DEBUG        New Record: 1 - manufacturer: 1 ("GARMIN") - product: 3122 - garmin  garmin.py:56
 ....
            INFO     Saving modified data to "/tmp/tmpvb_npaxt"                               garmin.py:107
-           INFO     Uploading modifed file to Garmin Connect                                 garmin.py:175
+           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
 [13:27:08] DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
            INFO     ✅ Successfully uploaded "fit_file_2.fit"                                garmin.py:139
            DEBUG    Adding "fit_file_2.fit" to "uploaded_files"                              garmin.py:177
@@ -162,7 +162,7 @@ process the configured TrainingPeaks Virtual user data folder.
 [13:27:12] INFO     Activity timestamp is "2024-05-14T16:42:09"                              garmin.py:85
 ....
 [13:27:13] INFO     Saving modified data to "/tmp/tmprt3nt1wq"                               garmin.py:107
-           INFO     Uploading modifed file to Garmin Connect                                 garmin.py:175
+           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
            DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
 [13:27:14] INFO     ✅ Successfully uploaded "fit_file_3.fit"                                garmin.py:139
            DEBUG    Adding "fit_file_3.fit" to "uploaded_files"                              garmin.py:177
@@ -170,7 +170,7 @@ process the configured TrainingPeaks Virtual user data folder.
 [13:27:17] INFO     Activity timestamp is "2024-05-21T17:15:48"                              garmin.py:85
 ....
 [13:27:18] INFO     Saving modified data to "/tmp/tmpqkh5iygz"                               garmin.py:107
-           INFO     Uploading modifed file to Garmin Connect                                 garmin.py:175
+           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
            DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
 [13:27:19] INFO     ✅ Successfully uploaded "fit_file_4.fit"                                garmin.py:139
            DEBUG    Adding "fit_file_4.fit" to "uploaded_files"                              garmin.py:177
@@ -178,25 +178,25 @@ process the configured TrainingPeaks Virtual user data folder.
 [13:27:21] INFO     Activity timestamp is "2024-05-13T16:57:41"                              garmin.py:85
 ....
 [13:27:22] INFO     Saving modified data to "/tmp/tmpd04eg3b8"                               garmin.py:107
-           INFO     Uploading modifed file to Garmin Connect                                 garmin.py:175
+           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
            DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
 [13:27:23] INFO     ✅ Successfully uploaded "fit_file_5.fit"                                garmin.py:139
            DEBUG    Adding "fit_file_5.fit" to "uploaded_files"                              garmin.py:177
 ```
 
-The upload all function can altnernatively be automated using the  `--daemonise` option, which will start
+The upload all function can alternatively be automated using the  `--daemonise` option, which will start
 watching the filesystem in the specified firectory for any new FIT files, compare them to a list of files
 already seen (stored in `.uploaded_files.json`), edit them, and upload each to Garmin Connect automatically.
-To use the daemonise function your Garmin Credntials must either be available in your environment variables
+To use the daemonise function your Garmin Credentials must either be available in your environment variables
 or stored locally. When first running the tool you will be prompted to store these for the daemonise option.
-To stop the daemon simply hit ctrl-c to interupt the process.
+To stop the daemon simply hit ctrl-c to interrupt the process.
 ```
 [08:50:45] INFO     Monitoring directory: C:\User\TPVUser\TPVirtual\1234567812345678         garmin.py:262
 ...
-^C[08:50:50] INFO     Recieved keyboard interupt, shutting down monitor                      garmin.py:267
+^C[08:50:50] INFO     Received keyboard interrupt, shutting down monitor                      garmin.py:267
 ```
 
-If you TrainingPeaks Virtual user data folder already contains FIT files which you have previously uploaded
+If your TrainingPeaks Virtual user data folder already contains FIT files which you have previously uploaded
 to Garmin Connect using a different method then you can pre-initialise the list of uploaded files to avoid
 any possibility of uploading duplicates. Use the `--preinitialise` option to process a directory (defaults to
 the configured TrainingPeaks Virtual user data directory) and add all files to the list of previous uploaded
@@ -221,4 +221,4 @@ will reject the upload. This script will detect that, and output something like 
 
 The use of any registered or unregistered trademarks owned by third-parties are used only for 
 informational purposes and no endorsement of this software by the owners of such trademarks are
-implied, explicity or otherwise.
+implied, explicitly or otherwise.
