@@ -271,16 +271,16 @@ def daemonise(watch_dir: Path):
 
 if __name__ == '__main__':    
     parser = argparse.ArgumentParser(description="Tool to add Garmin device information to FIT files and upload them to Garmin Connect")
-    parser.add_argument("input_file", nargs='?', default=[], help="the Garmin FIT file to modify")
+    parser.add_argument("input_file", nargs='?', default=[], help="the FIT file or directory to process")
     parser.add_argument("-u", "--upload", help="upload FIT file (after editing) to Garmin Connect", action="store_true")
     parser.add_argument(
         "-ua", 
         "--upload-all",  
         action="store_true",
-        help="upload all FIT files in current directory (if they are not in \"already processed\" list -- will override other all options)"
+        help="upload all FIT files in directory (if they are not in \"already processed\" list)"
     )
-    parser.add_argument('-p', '--preinitialise', help='preinitialise the list of processed FIT files based on the current direcotry contents', action='store_true')
-    parser.add_argument('-d','--daemonise',help='monitor a directory and  upload all newly created FIT files',action='store_true')
+    parser.add_argument('-p', '--preinitialise', help='preinitialise the list of processed FIT files', action='store_true')
+    parser.add_argument('-d','--daemonise',help='monitor a directory and upload all newly created FIT files',action='store_true')
     parser.add_argument('--dryrun', help='perform a dry run', action='store_true')
     parser.add_argument('-v', '--verbose', help='increase verbosity of log output', action='store_true')
     args = parser.parse_args()
