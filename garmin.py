@@ -73,7 +73,7 @@ def print_message(prefix, message):
     
 def first_run():
     _logger.info(f"Running first time setup")
-    TPVPath = os.path.expanduser('~/Documents/TPVirtual')
+    TPVPath = get_tpv_folder()
     res = [f for f in os.listdir(TPVPath) if re.search(r'\A(\w){16}\Z', f)]
     if len(res) == 0:
         _logger.error('Cannot find a TP Virtual User folder in %s, please check if you have previously logged into TP Virtual', TPVPath)
@@ -110,6 +110,16 @@ def first_run():
             with open(".env", "w") as f:
                 f.write(envFileContents)
             _logger.info(f"Stored Garmin credentials in {str(Path('.env').absolute())}")
+
+def get_tpv_folder() -> Path:
+    if sys.platform == "darwin":
+        TPVPath = os.path.expanduser('~/TPVirtual')
+    elif sys.platform == "win32":
+        TPVPath = os.path.expanduser('~/Documents/TPVirtual')
+    else:
+        TPVPath = os.path.expanduser('~/Documents/TPVirtual')
+        _logger.info(f"This tool is currently only tested for Windows/OSX, your TrainingPeaks Virtual user folder may not be found")
+    return Path(TPVPath)
 
 def get_date_from_fit(fit_path: Path) -> Optional[datetime]:
     fit_file = FitFile.from_file(str(fit_path))
@@ -303,15 +313,16 @@ if __name__ == '__main__':
     if not CONFIG_FILE.is_file():
         first_run()
     config = yaml.safe_load(open(CONFIG_FILE))
+    TPVFolder = get_tpv_folder()
     if args.upload_all or args.preinitialise:
         if not args.input_file:
-            watch_dir = Path(os.path.expanduser('~/Documents/TPVirtual')).joinpath(config['TPV_ID']).joinpath('FITFiles')
+            watch_dir = TPVFolder.joinpath(config['TPV_ID']).joinpath('FITFiles')
         else:
             watch_dir = args.input_file
         upload_all(Path(watch_dir), args.preinitialise, args.dryrun)
     elif args.daemonise:
         if not args.input_file:
-            watch_dir = Path(os.path.expanduser('~/Documents/TPVirtual')).joinpath(config['TPV_ID']).joinpath('FITFiles')
+            watch_dir = TPVFolder.joinpath(config['TPV_ID']).joinpath('FITFiles')
         else:
             watch_dir = args.input_file
         daemonise(Path(watch_dir))
