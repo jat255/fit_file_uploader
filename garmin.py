@@ -264,7 +264,7 @@ def daemonise(watch_dir: Path):
         while True:
             time.sleep(300)
     except KeyboardInterrupt as e:
-        _logger.info(f"Recieved keyboard interupt, shutting down monitor")
+        _logger.info(f"Received keyboard interrupt, shutting down monitor")
     finally:
         observer.stop()
         observer.join()
