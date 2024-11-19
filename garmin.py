@@ -246,14 +246,14 @@ def upload_all(dir: Path, preinitialise: bool = False, dryrun: bool = False):
         if not preinitialise:
             with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
                 try:
-                    output = edit_fit(Path(f), output=Path(fp.name))
+                    output = edit_fit(dir.joinpath(f), output=Path(fp.name))
                     _logger.info(f"Uploading modified file to Garmin Connect")
                     res = upload(output, original_path=Path(f), dryrun=dryrun)
+                    _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
+                    uploaded_files.append(f)
                 except:
                     _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
-        _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
-        uploaded_files.append(f)
-    
+
     if not dryrun:
         with files_uploaded.open('w') as f:
             json.dump(uploaded_files, f, indent=2)
