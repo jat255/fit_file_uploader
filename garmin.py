@@ -73,7 +73,7 @@ def print_message(prefix, message):
     
 def first_run():
     _logger.info(f"Running first time setup")
-    TPVPath = os.path.expanduser('~/TPVirtual')
+    TPVPath = os.path.expanduser('~/Documents/TPVirtual')
     res = [f for f in os.listdir(TPVPath) if re.search(r'\A(\w){16}\Z', f)]
     if len(res) == 0:
         _logger.error('Cannot find a TP Virtual User folder in %s, please check if you have previously logged into TP Virtual', TPVPath)
@@ -305,13 +305,13 @@ if __name__ == '__main__':
     config = yaml.safe_load(open(CONFIG_FILE))
     if args.upload_all or args.preinitialise:
         if not args.input_file:
-            watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID']).joinpath('FITFiles')
+            watch_dir = Path(os.path.expanduser('~/Documents/TPVirtual')).joinpath(config['TPV_ID']).joinpath('FITFiles')
         else:
             watch_dir = args.input_file
         upload_all(Path(watch_dir), args.preinitialise, args.dryrun)
     elif args.daemonise:
         if not args.input_file:
-            watch_dir = Path(os.path.expanduser('~/TPVirtual')).joinpath(config['TPV_ID']).joinpath('FITFiles')
+            watch_dir = Path(os.path.expanduser('~/Documents/TPVirtual')).joinpath(config['TPV_ID']).joinpath('FITFiles')
         else:
             watch_dir = args.input_file
         daemonise(Path(watch_dir))
