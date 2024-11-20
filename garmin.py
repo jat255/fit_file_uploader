@@ -137,7 +137,7 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None, dryrun: bool = False
     if not output:
         output = fit_path.parent / f"{fit_path.stem}_modified.fit"
 
-    builder = FitFileBuilder(auto_define=False)
+    builder = FitFileBuilder(auto_define=True)
     dt = None
     # loop through records, find the one we need to change, and modify the values:
     for i, record in enumerate(fit_file.records):
