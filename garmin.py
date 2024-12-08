@@ -63,6 +63,9 @@ class NewFileEventHandler(PatternMatchingEventHandler):
                                                              ignore_directories=True, case_sensitive=False)
     def on_created(self, event) -> None:
         _logger.debug("New file created - % s." % event.src_path)
+        # Wait for a short time to make sure TPV has finished writing to the file
+        time.sleep(5)
+        # Run the upload all function
         upload_all(Path(event.src_path).parent.absolute())
 
 def print_message(prefix, message):
@@ -245,14 +248,14 @@ def upload_all(dir: Path, preinitialise: bool = False, dryrun: bool = False):
         
         if not preinitialise:
             with NamedTemporaryFile(delete=True, delete_on_close=False) as fp:
-                try:
+                #try:
                     output = edit_fit(dir.joinpath(f), output=Path(fp.name))
                     _logger.info(f"Uploading modified file to Garmin Connect")
                     res = upload(output, original_path=Path(f), dryrun=dryrun)
                     _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
                     uploaded_files.append(f)
-                except:
-                    _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
+                #except:
+                #    _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
 
     if not dryrun:
         with files_uploaded.open('w') as f:
@@ -322,6 +325,7 @@ if __name__ == '__main__':
         upload_all(Path(watch_dir), args.preinitialise, args.dryrun)
     elif args.daemonise:
         if not args.input_file:
+            print(config['TPV_ID'])
             watch_dir = TPVFolder.joinpath(config['TPV_ID']).joinpath('FITFiles')
         else:
             watch_dir = args.input_file
