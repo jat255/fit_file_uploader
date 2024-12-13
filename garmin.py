@@ -253,9 +253,9 @@ def upload_all(dir: Path, preinitialise: bool = False, dryrun: bool = False):
                     _logger.info(f"Uploading modified file to Garmin Connect")
                     res = upload(output, original_path=Path(f), dryrun=dryrun)
                     _logger.debug(f"Adding \"{f}\" to \"uploaded_files\"")
-                    uploaded_files.append(f)
                 #except:
                 #    _logger.warning(f"Failed  to modify file \"{f}\", possibly malformed FIT file.")
+        uploaded_files.append(f)    
 
     if not dryrun:
         with files_uploaded.open('w') as f:
