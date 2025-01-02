@@ -32,6 +32,7 @@ logging.getLogger('oauth1_auth').setLevel(logging.WARNING)
 from fit_tool.fit_file import FitFile
 from fit_tool.profile.messages.device_info_message import DeviceInfoMessage
 from fit_tool.profile.messages.file_id_message import FileIdMessage
+from fit_tool.profile.messages.event_message import EventMessage
 from fit_tool.profile.profile_type import Manufacturer, GarminProduct
 from fit_tool.fit_file_builder import FitFileBuilder
 
@@ -102,7 +103,7 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
                     print_message(f"    New Record: {i}", message)
         
         # skip "event" fields. These are used by Zwift
-        if message.global_id == 21: continue
+        if message.global_id == EventMessage.ID: continue
             
         builder.add(message)
 
