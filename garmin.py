@@ -46,6 +46,7 @@ from fit_tool.fit_file import FitFile
 from fit_tool.fit_file_builder import FitFileBuilder
 from fit_tool.profile.messages.device_info_message import DeviceInfoMessage
 from fit_tool.profile.messages.file_id_message import FileIdMessage
+from fit_tool.profile.messages.event_message import EventMessage
 from fit_tool.profile.profile_type import GarminProduct, Manufacturer
 
 c = Console()
@@ -244,7 +245,7 @@ def edit_fit(
                     print_message(f"    New Record: {i}", message)
         
         # skip "event" fields. These are used by Zwift
-        if message.global_id == 21: continue
+        if message.global_id == EventMessage.ID: continue
             
         builder.add(message)
 
