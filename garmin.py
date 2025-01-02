@@ -100,7 +100,10 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
                     message.product = GarminProduct.EDGE_830.value                                # type: ignore
                     message.manufacturer = Manufacturer.GARMIN.value
                     print_message(f"    New Record: {i}", message)
-
+        
+        # skip "event" fields. These are used by Zwift
+        if message.global_id == 21: continue
+            
         builder.add(message)
 
     modified_file = builder.build()
