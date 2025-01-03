@@ -85,7 +85,7 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
                 dt = datetime.fromtimestamp(message.time_created/1000.0)   # type: ignore
                 _logger.info(f"Activity timestamp is \"{dt.isoformat()}\"")
                 print_message(f"Record: {i}", message)
-                if message.manufacturer == Manufacturer.DEVELOPMENT.value:
+                if message.manufacturer == Manufacturer.DEVELOPMENT.value or message.manufacturer == Manufacturer.ZWIFT.value:
                     _logger.debug('    Modifying values')
                     message.product = GarminProduct.EDGE_830.value
                     message.manufacturer = Manufacturer.GARMIN.value
@@ -95,7 +95,7 @@ def edit_fit(fit_path: Path, output: Optional[Path] = None) -> Path:
         if message.global_id == DeviceInfoMessage.ID:
             if isinstance(message, DeviceInfoMessage):
                 print_message(f"Record: {i}", message)
-                if message.manufacturer == Manufacturer.DEVELOPMENT.value or message.manufacturer == 0 or message.manufacturer == Manufacturer.WAHOO_FITNESS.value:
+                if message.manufacturer == Manufacturer.DEVELOPMENT.value or message.manufacturer == 0 or message.manufacturer == Manufacturer.WAHOO_FITNESS.value or message.manufacturer == Manufacturer.ZWIFT.value:
                     _logger.debug('    Modifying values')
                     message.garmin_product = GarminProduct.EDGE_830.value
                     message.product = GarminProduct.EDGE_830.value                                # type: ignore
