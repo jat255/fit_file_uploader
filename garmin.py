@@ -40,8 +40,8 @@ from fit_tool.fit_file_builder import FitFileBuilder
 load_dotenv()
 c = Console()
 
-EDGE830 = GarminProduct.EDGE_830
-GARMIN = Manufacturer.GARMIN
+#EDGE830 = GarminProduct.EDGE_830
+#GARMIN = Manufacturer.GARMIN
 FILES_UPLOADED = Path('.uploaded_files.json')
 
 class FitFileLogFilter(logging.Filter):
