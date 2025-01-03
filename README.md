@@ -1,4 +1,4 @@
-# TrainingPeaks Virtual to Garmin Connect editor/uploader
+# TrainingPeaks Virtual / Zwift to Garmin Connect editor/uploader
 
 This repo contains a script `garmin.py` that will edit [FIT](https://developer.garmin.com/fit/overview/) files
 to make them appear to come from a Garmin device (Edge 830, currently) and upload them to Garmin Connect
@@ -6,7 +6,7 @@ using the [`garth`](https://github.com/matin/garth/) library. The FIT editing
 is done using Stages Cycling's [`fit_tool`](https://bitbucket.org/stagescycling/python_fit_tool/src/main/) library.
 
 My primary use case for this is that [TrainingPeaks Virtual](https://www.trainingpeaks.com/virtual/) (previously 
-[indieVelo](https://indievelo.com/)) does not support (AFAIK, Garmin does not allow) automatic uploading to
+[indieVelo](https://indievelo.com/)) / [Zwift](https://www.zwift.com/) does not support (AFAIK, Garmin does not allow) automatic uploading to
 [Garmin Connect](http://connect.garmin.com/). The files can be manually uploaded after the fact,
 but since they are not "from Garmin", they will not be used to calculate Garmin's "Training Effect",
 which is used for suggested workouts and other stuff. By changing the FIT file to appear to come
