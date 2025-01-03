@@ -51,8 +51,8 @@ from fit_tool.profile.profile_type import GarminProduct, Manufacturer
 
 c = Console()
 
-EDGE830 = GarminProduct.EDGE_830
-GARMIN = Manufacturer.GARMIN
+#EDGE830 = GarminProduct.EDGE_830
+#GARMIN = Manufacturer.GARMIN
 FILES_UPLOADED_NAME = Path(".uploaded_files.json")
 
 
