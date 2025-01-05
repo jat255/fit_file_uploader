@@ -12,10 +12,18 @@ but since they are not "from Garmin", they will not be used to calculate Garmin'
 which is used for suggested workouts and other stuff. By changing the FIT file to appear to come
 from a Garmin device, those features will be should be enabled.
 
+## Contributors
+
+- @jat255: Primary author
+- @benjmarshall: bug fixes, monitor mode, and other improvements
+
 ## Installation
 
-Required Python 3.12. If your system python is older than that, I recommend
-using [pyenv](https://github.com/pyenv/pyenv) to manage locally installed versions.
+Requires Python 3.12. If your system python is older than that,
+[pyenv](https://github.com/pyenv/pyenv) can be used to manage locally installed versions.
+
+This script should work cross-platform on Windows, MacOS, or Linux, though it is primarily
+developed on Linux, so it's possible there are some cross-platform bugs.
 
 It's probably best to create a new virtual environment:
 
@@ -30,44 +38,102 @@ Then install the requirements:
 (.venv) $ pip install -r requirements.txt 
 ```
 
+## Configuration
+
+The script uses a configuration file named `.config.json` stored in the same directory as the script.
+An example is provided in this repo in `.config.json.example`: 
+
+```json
+{
+  "garmin_username": "username",
+  "garmin_password": "password",
+  "fitfiles_path": "C:\Users\username\Documents\TPVirtual\0123456789ABCDEF\FITFiles"
+}
+```
+
+You can either edit this file manually and save it as `.config.json`, or run the "initial setup"
+option, which will allow you to define the three required values interactively:
+
+```bash
+(.venv) $ python garmin.py -s
+
+[13:50:02] WARNING  Required value "garmin_username" not found in config                garmin.py:404
+? Enter value to use for "garmin_username" username
+[13:50:05] WARNING  Required value "garmin_password" not found in config                garmin.py:404
+? Enter value to use for "garmin_password" ********
+[13:50:06] WARNING  Required value "fitfiles_path" not found in config                  garmin.py:404
+           INFO     Getting FITFiles folder                                             garmin.py:133
+           WARNING  TrainingPeaks Virtual user folder can only be automatically         garmin.py:175
+                    detected on Windows and OSX                                                 
+? Please enter your TrainingPeaks Virtual data folder (by default, ends with "TPVirtual"):
+/home/user/Documents/TPVirtual
+? Found TP Virtual User directory at "/home/user/Documents/TPVirtual/0123456789ABCDEF", is this correct?
+yes
+[13:50:17] INFO     Found TP Virtual User directory: "/home/user/Documents/TPVirtual      garmin.py:158
+                    sync/0123456789ABCEDF", setting "fitfiles_path" in config file              
+           INFO     Config file is now:                                                 garmin.py:440
+                    {                                                                           
+                      "garmin_username": "username",                                            
+                      "garmin_password": "<**hidden**>",                                    
+                      "fitfiles_path": "/home/user/Documents/TPVirtual/0123456789ABCDEF/FITFiles"                                             
+                    }                                                                           
+           INFO     Config file has been written, now run one of the other options      garmin.py:530
+                    to start editing/uploading files! 
+```
+
 ## Usage
 
-The script is pretty simple, and has a couple options. To see the help, run with the `-h` flag:
+The script has a few options. To see the help, run with the `-h` flag:
 
 ```bash
 (.venv) $ python garmin.py -h
 ```
 ```
-usage: garmin.py [-h] [-u] [-ua] [-p] [-d] [--dryrun] [-v] [input_file]
+usage: garmin.py [-h] [-s] [-u] [-ua] [-p] [-m] [--dryrun] [-v] [input_path]
 
-Tool to add Garmin device information to FIT files and upload them to Garmin Connect
+Tool to add Garmin device information to FIT files and upload them to Garmin Connect.
+Currently, only FIT files produced by the TrainingPeaks Virtual
+(https://www.trainingpeaks.com/virtual/) are supported.
 
 positional arguments:
-  input_file           the FIT file or directory to process
+  input_path           the FIT file or directory to process. This argument can be omitted if
+                       the 'fitfiles_path'config value is set (that directory will be used
+                       instead). By default, files will just be edited. Specify the "-u" flag
+                       to also upload them to Garmin Connect.
 
 options:
   -h, --help           show this help message and exit
+  -s, --initial-setup  Use this option to interactively initialize the configuration file
+                       (.config.json)
   -u, --upload         upload FIT file (after editing) to Garmin Connect
-  -ua, --upload-all    upload all FIT files in directory (if they are not in "already processed" list)
-  -p, --preinitialise  preinitialise the list of processed FIT files
-  -d, --daemonise      monitor a directory and upload all newly created FIT files
-  --dryrun             perform a dry run
+  -ua, --upload-all    upload all FIT files in directory (if they are not in "already
+                       processed" list)
+  -p, --preinitialize  preinitialize the list of processed FIT files (mark all existing files
+                       in directory as already uploaded)
+  -m, --monitor        monitor a directory and upload all newly created FIT files as they are
+                       found
+  --dryrun             perform a dry run, meaning any files processed will not be saved nor
+                       uploaded
   -v, --verbose        increase verbosity of log output
 ```
 
-The default behavior will load the FIT file, and output a file named `path_to_file_modified.fit`
+### Basic usage
+
+The default behavior with no other options load a given FIT file, and output a file named `path_to_file_modified.fit`
 that has been edited, and can be manually imported to Garmin Connect:
 
 ```bash
 (.venv) $ python garmin.py path_to_file.fit
 ```
 
+If a directory is supplied rather than a single file, all FIT files in that directory will be processed in
+the same way.
+
 Supplying the `-u` option will attempt to upload the edited file to Garmin Connect. Credentials
-can be supplied either as environment variables named `GARMIN_USERNAME` and `GARMIN_PASSWORD`,
-or by putting those values in a `.env` file in the same directory as this script (see `.env.example`).
-Alternatively, if neither option is supplied, the script will prompt you interactively for a username/email
-and password. The OAuth credentials will be stored in a local directory named `./.garth` (see
-that library's [documentation](https://github.com/matin/garth/?tab=readme-ov-file#authentication-and-stability))
+should be supplied in the `.config.json` file, or by running `./garmin.py -s` first.
+The OAuth credentials obtained for the Garmin web service will be stored in a directory
+named `.garth` in the same directory as this file (see that library's
+[documentation](https://github.com/matin/garth/?tab=readme-ov-file#authentication-and-stability))
 for details:
 
 ```bash
@@ -109,98 +175,47 @@ The `-v` flag can be used (with any of the other options) to provide more debugg
 [12:38:35] INFO     ✅ Successfully uploaded "path_to_file.fit"                             garmin.py:137
 ```
 
-The way I personally use this script is with the `--upload-all` option, which will search
-for all FIT files in the current directory, compare them to a list of files already seen (stored in
-`.uploaded_files.json`) edit them, and upload each to Garmin Connect. The edited files will be written
-into a temporary file and discarded when the script finishes running, and the filenames will be stored
-into a JSON file in the current directory so they are skipped the next time the script is run.
+### "Upload all" and "monitor" modes
 
-On the first run of the tool (unless specifying a single file to modify) a setup process will attempt to
-automatically locate your TrainingPeaks Virtual user data folder which stores the recorded FIT files. You
-will also be prompted to store your Garmin credentials if they are not supplied as environment variables.
-After this setup has run using the `--upload-all` option with no input file argument will automatically
-process the configured TrainingPeaks Virtual user data folder.
+The `--upload-all` option will search for all FIT files eith in the directory given on the command line,
+or in the one specified in the `fitfiles_path` config option. The script will compare the files found to a
+list of files already seen (stored in that directory's `.uploaded_files.json` file), edit them, and upload
+each to Garmin Connect. The edited files will be written into a temporary file and discarded when the
+script finishes running, and the filenames will be stored into a JSON file in the current directory so
+they are skipped the next time the script is run.
 
-```bash
-(.venv) $ python garmin.py --upload-all -v
-```
-```
-[13:26:56] DEBUG    Found the following already uploaded files: []                           garmin.py:157
-           INFO     Found 5 files to edit/upload                                             garmin.py:164
-           DEBUG    Files to upload: ['fit_file_1.fit',                                      garmin.py:165
-                    'fit_file_2.fit',
-                    'fit_file_3.fit',
-                    'fit_file_4.fit',
-                    'fit_file_5.fit']
-           INFO     Processing "fit_file_1.fit"                                              garmin.py:171
-[13:26:59] INFO     Activity timestamp is "2024-05-20T17:11:55"                              garmin.py:85
-           DEBUG    Record: 1 - manufacturer: 255 ("DEVELOPMENT") - product: 0 - garmin      garmin.py:56
-                    product: None ("BLANK")
-           DEBUG        Modifying values                                                     garmin.py:88
-           DEBUG        New Record: 1 - manufacturer: 1 ("GARMIN") - product: 3122 - garmin  garmin.py:56
-....
-[13:27:00] INFO     Saving modified data to "/tmp/tmpljc9mx67"                               garmin.py:107
-           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
-           INFO     Authenticating to Garmin Connect                                         garmin.py:122
-           DEBUG    Using username "user"                                                    garmin.py:127
-           DEBUG    Using password stored in "GARMIN_PASSWORD"                               garmin.py:132
-[13:27:04] INFO     ✅ Successfully uploaded "fit_file_1.fit"                                garmin.py:139
-           DEBUG    Adding "fit_file_1.fit" to "uploaded_files"                              garmin.py:177
-           INFO     Processing "fit_file_2.fit"                                              garmin.py:171
-[13:27:07] INFO     Activity timestamp is "2024-05-10T17:17:34"                              garmin.py:85
-           DEBUG    Record: 1 - manufacturer: 255 ("DEVELOPMENT") - product: 0 - garmin      garmin.py:56
-                    product: None ("BLANK")
-           DEBUG        Modifying values                                                     garmin.py:88
-           DEBUG        New Record: 1 - manufacturer: 1 ("GARMIN") - product: 3122 - garmin  garmin.py:56
-....
-           INFO     Saving modified data to "/tmp/tmpvb_npaxt"                               garmin.py:107
-           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
-[13:27:08] DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
-           INFO     ✅ Successfully uploaded "fit_file_2.fit"                                garmin.py:139
-           DEBUG    Adding "fit_file_2.fit" to "uploaded_files"                              garmin.py:177
-           INFO     Processing "fit_file_3.fit"                                              garmin.py:171
-[13:27:12] INFO     Activity timestamp is "2024-05-14T16:42:09"                              garmin.py:85
-....
-[13:27:13] INFO     Saving modified data to "/tmp/tmprt3nt1wq"                               garmin.py:107
-           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
-           DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
-[13:27:14] INFO     ✅ Successfully uploaded "fit_file_3.fit"                                garmin.py:139
-           DEBUG    Adding "fit_file_3.fit" to "uploaded_files"                              garmin.py:177
-           INFO     Processing "fit_file_4.fit"                                              garmin.py:171
-[13:27:17] INFO     Activity timestamp is "2024-05-21T17:15:48"                              garmin.py:85
-....
-[13:27:18] INFO     Saving modified data to "/tmp/tmpqkh5iygz"                               garmin.py:107
-           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
-           DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
-[13:27:19] INFO     ✅ Successfully uploaded "fit_file_4.fit"                                garmin.py:139
-           DEBUG    Adding "fit_file_4.fit" to "uploaded_files"                              garmin.py:177
-           INFO     Processing "fit_file_5.fit"                                              garmin.py:171
-[13:27:21] INFO     Activity timestamp is "2024-05-13T16:57:41"                              garmin.py:85
-....
-[13:27:22] INFO     Saving modified data to "/tmp/tmpd04eg3b8"                               garmin.py:107
-           INFO     Uploading modified file to Garmin Connect                                 garmin.py:175
-           DEBUG    Using stored Garmin credentials from ".garth" directory                  garmin.py:119
-[13:27:23] INFO     ✅ Successfully uploaded "fit_file_5.fit"                                garmin.py:139
-           DEBUG    Adding "fit_file_5.fit" to "uploaded_files"                              garmin.py:177
-```
+The upload all function can alternatively be automated using the  `--monitor` option, which will start
+watching the filesystem in the specified directory for any new FIT files, and continue running until
+the user interrupts the process by pressing `ctrl-c`. Here is an example output when a new file named
+`new_fit_file.fit` is detected:
 
-The upload all function can alternatively be automated using the  `--daemonise` option, which will start
-watching the filesystem in the specified firectory for any new FIT files, compare them to a list of files
-already seen (stored in `.uploaded_files.json`), edit them, and upload each to Garmin Connect automatically.
-To use the daemonise function your Garmin Credentials must either be available in your environment variables
-or stored locally. When first running the tool you will be prompted to store these for the daemonise option.
-To stop the daemon simply hit ctrl-c to interrupt the process.
 ```
-[08:50:45] INFO     Monitoring directory: C:\User\TPVUser\TPVirtual\1234567812345678         garmin.py:262
-...
-^C[08:50:50] INFO     Received keyboard interrupt, shutting down monitor                      garmin.py:267
+$ python garmin.py --monitor /home/user/Documents/TPVirtual/0123456789ABCEDF/FITFiles
+
+[14:03:32] INFO     Using path "/home/user/Documents/TPVirtual/                    garmin.py:561
+                    0123456789ABCEDF/FITFiles" from command line input                     
+           INFO     Monitoring directory: "/home/user/Documents/TPVirtual/         garmin.py:367
+                    0123456789ABCEDF/FITFiles"                                             
+[14:03:44] INFO     New file detected - "/home/user/Documents/TPVirtual/           garmin.py:94
+                    0123456789ABCEDF/FITFiles/new_fit_file.fit"; sleeping for              
+                    5 seconds to ensure TPV finishes writing file                               
+[14:03:50] INFO     Found 1 files to edit/upload                                   garmin.py:333
+           INFO     Processing "new_fit_file.fit"                                  garmin.py:340
+           INFO     Processing "/home/user/Documents/TPVirtual                     garmin.py:202
+                    sync/0123456789ABCEDF/FITFiles/new_fit_file.fit"                            
+[14:03:58] INFO     Activity timestamp is "2025-01-03T17:01:45"                    garmin.py:223
+[14:03:59] INFO     Saving modified data to "/tmp/tmpsn4gvpkh"                     garmin.py:250
+[14:04:00] INFO     Uploading modified file to Garmin Connect                      garmin.py:346
+[14:04:01] INFO     Uploading "/tmp/tmpsn4gvpkh" using garth                       garmin.py:295
+^C[14:04:46] INFO     Received keyboard interrupt, shutting down monitor           garmin.py:372
 ```
 
 If your TrainingPeaks Virtual user data folder already contains FIT files which you have previously uploaded
 to Garmin Connect using a different method then you can pre-initialise the list of uploaded files to avoid
-any possibility of uploading duplicates. Use the `--preinitialise` option to process a directory (defaults to
+any possibility of uploading duplicates (though these files *should* be rejected by Garmin Connect
+if they're exact duplicates). Use the `--preinitialize` option to process a directory (defaults to
 the configured TrainingPeaks Virtual user data directory) and add all files to the list of previous uploaded
-files. After this any use of the `--upload-all` or `--daemonise` options will ignore these pre-existing files.
+files. After this any use of the `--upload-all` or `--monitor` options will ignore these pre-existing files.
 
 ### Already uploaded files
 
@@ -221,4 +236,6 @@ will reject the upload. This script will detect that, and output something like 
 
 The use of any registered or unregistered trademarks owned by third-parties are used only for 
 informational purposes and no endorsement of this software by the owners of such trademarks are
-implied, explicitly or otherwise.
+implied, explicitly or otherwise. The terms/trademarks indieVelo, TrainingPeaks, TrainingPeaks Virtual,
+Garmin Connect, Stages Cycling, and any others are used under fair use doctrine solely to
+facilitate understanding.

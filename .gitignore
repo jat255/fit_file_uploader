@@ -4,3 +4,4 @@
 .vscode
 .uploaded_files.json
 *.fit
+.config.json
