@@ -1,6 +1,6 @@
 # ruff: noqa: E402
 """
-Takes a .fit file produced by TrainingPeaks Virtual and modifies the fields so that Garmin
+Takes a .fit file produced and modifies the fields so that Garmin
 will think it came from a Garmin device and use it to determine training effect.
 
 Simulates an Edge 830 device
@@ -21,6 +21,7 @@ from typing import Optional, cast
 
 import questionary
 import semver
+from platformdirs import PlatformDirs
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import install
@@ -49,7 +50,7 @@ from fit_tool.profile.messages.file_id_message import FileIdMessage
 from fit_tool.profile.profile_type import GarminProduct, Manufacturer
 
 c = Console()
-
+dirs = PlatformDirs("FitFileFaker", appauthor=False, ensure_exists=True)
 FILES_UPLOADED_NAME = Path(".uploaded_files.json")
 
 
@@ -61,7 +62,7 @@ class Config:
 
 
 # set up config file and in-memory config store
-_config_file = Path(__file__).parent / ".config.json"
+_config_file = dirs.user_config_path / ".config.json"
 _config_file.touch(exist_ok=True)
 _config_keys = ["garmin_username", "garmin_password", "fitfiles_path"]
 with _config_file.open("r") as f:
@@ -270,8 +271,9 @@ def upload(fn: Path, original_path: Optional[Path] = None, dryrun: bool = False)
     import garth
     from garth.exc import GarthException, GarthHTTPError
 
-    garth_dir = Path(__file__).parent / ".garth"
+    garth_dir = dirs.user_cache_path / ".garth"
     garth_dir.mkdir(exist_ok=True)
+    _logger.debug(f'Using "{garth_dir}" for garth credentials')
 
     try:
         garth.resume(str(garth_dir.absolute()))
@@ -457,7 +459,7 @@ def build_config_file(
     _logger.info(f"Config file is now:\n{config_content}")
 
 
-if __name__ == "__main__":
+def run():
     v = sys.version_info
     v_str = f"{v.major}.{v.minor}.{v.micro}"
     min_ver = "3.12.0"
@@ -531,6 +533,7 @@ if __name__ == "__main__":
             "watchdog.observers.inotify_buffer",
         ]:
             logging.getLogger(logger).setLevel(logging.INFO)
+        _logger.debug(f'Using "{_config_file}" as config file')
     else:
         _logger.setLevel(logging.INFO)
         for logger in [
@@ -546,7 +549,8 @@ if __name__ == "__main__":
     if args.initial_setup:
         build_config_file(overwrite_existing_vals=True, rewrite_config=True)
         _logger.info(
-            "Config file has been written, now run one of the other options to start editing/uploading files!"
+            f'Config file has been written to "{_config_file}", now run one of the other options to '
+            'start editing/uploading files!'
         )
         sys.exit(0)
     if not args.input_path and not (
@@ -608,3 +612,7 @@ if __name__ == "__main__":
             _logger.info(f"Found {len(files_to_edit)} FIT files to edit")
             for f in files_to_edit:
                 edit_fit(f, dryrun=args.dryrun)
+
+
+if __name__ == "__main__":
+    run()

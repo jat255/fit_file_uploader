@@ -1,6 +1,0 @@
-fit-tool==0.9.13
-garth==0.4.47
-semver==3.0.2
-questionary==2.1.0
-watchdog==6.0.0
-rich==13.7.1

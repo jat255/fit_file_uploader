@@ -5,3 +5,7 @@
 .uploaded_files.json
 *.fit
 .config.json
+*.egg-info
+dist
+test
+__pycache__
