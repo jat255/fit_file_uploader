@@ -1,21 +1,27 @@
-# TrainingPeaks Virtual to Garmin Connect editor/uploader
+# FIT File editor and uploader
 
-This repo contains a script `garmin.py` that will edit [FIT](https://developer.garmin.com/fit/overview/) files
+This repo contains a script (`garmin.py`) that will edit [FIT](https://developer.garmin.com/fit/overview/) files
 to make them appear to come from a Garmin device (Edge 830, currently) and upload them to Garmin Connect
 using the [`garth`](https://github.com/matin/garth/) library. The FIT editing
 is done using Stages Cycling's [`fit_tool`](https://bitbucket.org/stagescycling/python_fit_tool/src/main/) library.
 
-My primary use case for this is that [TrainingPeaks Virtual](https://www.trainingpeaks.com/virtual/) (previously 
+The primary use case for this is that [TrainingPeaks Virtual](https://www.trainingpeaks.com/virtual/) (previously 
 [indieVelo](https://indievelo.com/)) does not support (AFAIK, Garmin does not allow) automatic uploading to
 [Garmin Connect](http://connect.garmin.com/). The files can be manually uploaded after the fact,
 but since they are not "from Garmin", they will not be used to calculate Garmin's "Training Effect",
 which is used for suggested workouts and other stuff. By changing the FIT file to appear to come
-from a Garmin device, those features will be should be enabled.
+from a Garmin device, those features should be enabled.
+
+Other users have reported using this tool to edit FIT files produced by [Zwift](https://www.zwift.com/)
+prior to uploading to Garmin Connect so that activities on that platform will count towards Garmin Connect
+badges and challenges (see [1](https://forums.zwift.com/t/garmin-disabled-zwift-rides-badges/528612) and
+[2](https://forums.garmin.com/apps-software/mobile-apps-web/f/garmin-connect-web/251574/zwift-rides-no-longer-count-towards-challenges)).
 
 ## Contributors
 
-- @jat255: Primary author
-- @benjmarshall: bug fixes, monitor mode, and other improvements
+- [jat255](https://github.com/jat255): Primary author
+- [benjmarshall](https://github.com/benjmarshall): bug fixes, monitor mode, and other improvements
+- [Kellett](https://github.com/Kellett): support for Zwift FIT files
 
 ## Installation
 
@@ -47,7 +53,7 @@ An example is provided in this repo in `.config.json.example`:
 {
   "garmin_username": "username",
   "garmin_password": "password",
-  "fitfiles_path": "C:\Users\username\Documents\TPVirtual\0123456789ABCDEF\FITFiles"
+  "fitfiles_path": "C:\\Users\\username\\Documents\\TPVirtual\\0123456789ABCDEF\\FITFiles"
 }
 ```
 
@@ -91,13 +97,14 @@ The script has a few options. To see the help, run with the `-h` flag:
 ```
 usage: garmin.py [-h] [-s] [-u] [-ua] [-p] [-m] [--dryrun] [-v] [input_path]
 
-Tool to add Garmin device information to FIT files and upload them to Garmin Connect.
-Currently, only FIT files produced by the TrainingPeaks Virtual
-(https://www.trainingpeaks.com/virtual/) are supported.
+Tool to add Garmin device information to FIT files and upload them to Garmin Connect. Currently,
+only FIT files produced by TrainingPeaks Virtual (https://www.trainingpeaks.com/virtual/) and
+Zwift (https://www.zwift.com/) are supported, but it's possible others may work.
+
 
 positional arguments:
   input_path           the FIT file or directory to process. This argument can be omitted if
-                       the 'fitfiles_path'config value is set (that directory will be used
+                       the 'fitfiles_path' config value is set (that directory will be used
                        instead). By default, files will just be edited. Specify the "-u" flag
                        to also upload them to Garmin Connect.
 
@@ -112,7 +119,7 @@ options:
                        in directory as already uploaded)
   -m, --monitor        monitor a directory and upload all newly created FIT files as they are
                        found
-  --dryrun             perform a dry run, meaning any files processed will not be saved nor
+  -d, --dryrun         perform a dry run, meaning any files processed will not be saved nor
                        uploaded
   -v, --verbose        increase verbosity of log output
 ```

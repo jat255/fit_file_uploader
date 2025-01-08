@@ -50,8 +50,6 @@ from fit_tool.profile.profile_type import GarminProduct, Manufacturer
 
 c = Console()
 
-EDGE830 = GarminProduct.EDGE_830
-GARMIN = Manufacturer.GARMIN
 FILES_UPLOADED_NAME = Path(".uploaded_files.json")
 
 
@@ -87,12 +85,16 @@ logging.getLogger("fit_tool").addFilter(FitFileLogFilter())
 class NewFileEventHandler(PatternMatchingEventHandler):
     def __init__(self, dryrun: bool = False):
         _logger.debug(f"Creating NewFileEventHandler with {dryrun=}")
-        super().__init__(patterns=["*.fit"], ignore_directories=True, case_sensitive=False)
+        super().__init__(
+            patterns=["*.fit"], ignore_directories=True, case_sensitive=False
+        )
         self.dryrun = dryrun
 
     def on_created(self, event) -> None:
-        _logger.info(f"New file detected - \"{event.src_path}\"; sleeping for 5 seconds "
-                      "to ensure TPV finishes writing file")
+        _logger.info(
+            f'New file detected - "{event.src_path}"; sleeping for 5 seconds '
+            "to ensure TPV finishes writing file"
+        )
         if not self.dryrun:
             # Wait for a short time to make sure TPV has finished writing to the file
             time.sleep(5)
@@ -103,7 +105,9 @@ class NewFileEventHandler(PatternMatchingEventHandler):
             p = cast(str, p)
             upload_all(Path(p).parent.absolute())
         else:
-            _logger.warning("Found new file, but not processing because dryrun was requested")
+            _logger.warning(
+                "Found new file, but not processing because dryrun was requested"
+            )
 
 
 def print_message(prefix, message):
@@ -206,7 +210,7 @@ def edit_fit(
         _logger.error("File does not appear to be a FIT file, skipping...")
         # c.print_exception(show_locals=True)
         return None
-        
+
     if not output:
         output = fit_path.parent / f"{fit_path.stem}_modified.fit"
 
@@ -221,8 +225,11 @@ def edit_fit(
             if isinstance(message, FileIdMessage):
                 dt = datetime.fromtimestamp(message.time_created / 1000.0)  # type: ignore
                 _logger.info(f'Activity timestamp is "{dt.isoformat()}"')
-                print_message(f"Record: {i}", message)
-                if message.manufacturer == Manufacturer.DEVELOPMENT.value:
+                print_message(f"FileIdMessage Record: {i}", message)
+                if (
+                    message.manufacturer == Manufacturer.DEVELOPMENT.value
+                    or message.manufacturer == Manufacturer.ZWIFT.value
+                ):
                     _logger.debug("    Modifying values")
                     message.product = GarminProduct.EDGE_830.value
                     message.manufacturer = Manufacturer.GARMIN.value
@@ -231,11 +238,12 @@ def edit_fit(
         # change device info messages
         if message.global_id == DeviceInfoMessage.ID:
             if isinstance(message, DeviceInfoMessage):
-                print_message(f"Record: {i}", message)
+                print_message(f"DeviceInfoMessage Record: {i}", message)
                 if (
                     message.manufacturer == Manufacturer.DEVELOPMENT.value
                     or message.manufacturer == 0
                     or message.manufacturer == Manufacturer.WAHOO_FITNESS.value
+                    or message.manufacturer == Manufacturer.ZWIFT.value
                 ):
                     _logger.debug("    Modifying values")
                     message.garmin_product = GarminProduct.EDGE_830.value
@@ -364,7 +372,7 @@ def monitor(watch_dir: Path, dryrun: bool = False):
     observer.start()
     if dryrun:
         _logger.warning("Dryrun was requested, so will not actually take any actions")
-    _logger.info(f"Monitoring directory: \"{watch_dir.absolute()}\"")
+    _logger.info(f'Monitoring directory: "{watch_dir.absolute()}"')
     try:
         while observer.is_alive():
             observer.join(1)
@@ -415,9 +423,13 @@ def build_config_file(
                         else:
                             val = questionary.text(msg).unsafe_ask()
                     else:
-                        val = str(get_fitfiles_path(
-                            Path(_config.fitfiles_path).parent.parent if _config.fitfiles_path else None
-                        ))
+                        val = str(
+                            get_fitfiles_path(
+                                Path(_config.fitfiles_path).parent.parent
+                                if _config.fitfiles_path
+                                else None
+                            )
+                        )
                     if val:
                         valid_input = True
                         setattr(_config, k, val)
@@ -435,8 +447,13 @@ def build_config_file(
         with open(_config_file, "w") as f:
             json.dump(asdict(_config), f, indent=2)
     config_content = json.dumps(asdict(_config), indent=2)
-    if hasattr(_config, "garmin_password") and getattr(_config, "garmin_password") is not None:
-        config_content = config_content.replace(cast(str, _config.garmin_password), "<**hidden**>")
+    if (
+        hasattr(_config, "garmin_password")
+        and getattr(_config, "garmin_password") is not None
+    ):
+        config_content = config_content.replace(
+            cast(str, _config.garmin_password), "<**hidden**>"
+        )
     _logger.info(f"Config file is now:\n{config_content}")
 
 
@@ -451,14 +468,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Tool to add Garmin device information to FIT files and upload them to Garmin Connect. "
-        "Currently, only FIT files produced by the TrainingPeaks Virtual (https://www.trainingpeaks.com/virtual/) "
-        "are supported."
+        "Currently, only FIT files produced by TrainingPeaks Virtual (https://www.trainingpeaks.com/virtual/) "
+        "and Zwift (https://www.zwift.com/) are supported, but it's possible others may work."
     )
     parser.add_argument(
         "input_path",
         nargs="?",
         default=[],
-        help="the FIT file or directory to process. This argument can be omitted if the 'fitfiles_path'"
+        help="the FIT file or directory to process. This argument can be omitted if the 'fitfiles_path' "
         "config value is set (that directory will be used instead). By default, files will just be edited. "
         'Specify the "-u" flag to also upload them to Garmin Connect.',
     )
@@ -493,6 +510,7 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
+        "-d",
         "--dryrun",
         help="perform a dry run, meaning any files processed will not be saved nor uploaded",
         action="store_true",
@@ -540,7 +558,9 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(1)
     if args.monitor and args.upload_all:
-        _logger.error('***************************\nCannot use "--upload-all" and "--monitor" together\n***************************\n')
+        _logger.error(
+            '***************************\nCannot use "--upload-all" and "--monitor" together\n***************************\n'
+        )
         parser.print_help()
         sys.exit(1)
 
