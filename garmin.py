@@ -46,7 +46,6 @@ from fit_tool.fit_file import FitFile
 from fit_tool.fit_file_builder import FitFileBuilder
 from fit_tool.profile.messages.device_info_message import DeviceInfoMessage
 from fit_tool.profile.messages.file_id_message import FileIdMessage
-from fit_tool.profile.messages.event_message import EventMessage
 from fit_tool.profile.profile_type import GarminProduct, Manufacturer
 
 c = Console()
@@ -469,14 +468,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Tool to add Garmin device information to FIT files and upload them to Garmin Connect. "
-        "Currently, only FIT files produced by the TrainingPeaks Virtual (https://www.trainingpeaks.com/virtual/) "
-        "are supported."
+        "Currently, only FIT files produced by TrainingPeaks Virtual (https://www.trainingpeaks.com/virtual/) "
+        "and Zwift (https://www.zwift.com/) are supported, but it's possible others may work."
     )
     parser.add_argument(
         "input_path",
         nargs="?",
         default=[],
-        help="the FIT file or directory to process. This argument can be omitted if the 'fitfiles_path'"
+        help="the FIT file or directory to process. This argument can be omitted if the 'fitfiles_path' "
         "config value is set (that directory will be used instead). By default, files will just be edited. "
         'Specify the "-u" flag to also upload them to Garmin Connect.',
     )
@@ -511,6 +510,7 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
+        "-d",
         "--dryrun",
         help="perform a dry run, meaning any files processed will not be saved nor uploaded",
         action="store_true",
