@@ -1,6 +1,6 @@
 [project]
 name = "fit-file-faker"
-version = "0.2.0"
+version = "0.2.0_dev"
 description = "A small tool to edit and upload FIT files to Garmin Connect"
 authors = [
   { name="Josh Taillon", email="jat255@gmail.com" },
@@ -33,7 +33,7 @@ Homepage = "https://github.com/jat255/Fit-File-Faker"
 Issues = "https://github.com/jat255/Fit-File-Faker/issues"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=64.0"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
