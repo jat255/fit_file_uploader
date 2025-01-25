@@ -43,9 +43,11 @@ _logger.setLevel(logging.INFO)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 logging.getLogger("oauth1_auth").setLevel(logging.WARNING)
 
+from fit_tool.definition_message import DefinitionMessage
 from fit_tool.fit_file import FitFile
 from fit_tool.fit_file_builder import FitFileBuilder
 from fit_tool.profile.messages.device_info_message import DeviceInfoMessage
+from fit_tool.profile.messages.file_creator_message import FileCreatorMessage
 from fit_tool.profile.messages.file_id_message import FileIdMessage
 from fit_tool.profile.profile_type import GarminProduct, Manufacturer
 
@@ -111,7 +113,7 @@ class NewFileEventHandler(PatternMatchingEventHandler):
             )
 
 
-def print_message(prefix, message):
+def print_message(prefix, message: FileIdMessage | DeviceInfoMessage):
     man = (
         Manufacturer(message.manufacturer).name
         if message.manufacturer in Manufacturer
@@ -122,10 +124,12 @@ def print_message(prefix, message):
         if message.garmin_product in GarminProduct
         else "BLANK"
     )
-    _logger.debug(
-        f'{prefix} - manufacturer: {message.manufacturer} ("{man}") - '
-        f'product: {message.product} - garmin product: {message.garmin_product} ("{gar_prod}")'
-    )
+    # _logger.debug(
+    #     f'{prefix} - manufacturer: {message.manufacturer} ("{man}") - '
+    #     f'product: {message.product} - garmin product: {message.garmin_product} ("{gar_prod}")'
+    # )
+    _logger.debug(f"{prefix} - {message.to_row()=}\n"
+                  f"(Manufacturer: {man}, product: {message.product}, garmin_product: {gar_prod})")
 
 
 def get_fitfiles_path(existing_path: Path | None) -> Path:
@@ -198,6 +202,41 @@ def get_date_from_fit(fit_path: Path) -> Optional[datetime]:
                 break
     return res
 
+def rewrite_file_id_message(
+        m: FileIdMessage,
+        message_num: int,
+    ) -> tuple[DefinitionMessage, FileIdMessage]:
+    dt = datetime.fromtimestamp(m.time_created / 1000.0)  # type: ignore
+    _logger.info(f'Activity timestamp is "{dt.isoformat()}"')
+    print_message(f"FileIdMessage Record: {message_num}", m)
+
+    new_m = FileIdMessage()
+    new_m.time_created = (
+        m.time_created if m.time_created 
+        else int(dt.now().timestamp() * 1000)
+    )
+    if m.type:
+        new_m.type = m.type
+    if m.serial_number is not None:
+        new_m.serial_number = m.serial_number
+    if m.product_name:
+        # garmin does not appear to define product_name, so don't copy it over
+        pass
+        # new_m.product_name = m.product_name
+    
+    if (
+        m.manufacturer == Manufacturer.DEVELOPMENT.value or 
+        m.manufacturer == Manufacturer.ZWIFT.value or 
+        m.manufacturer == Manufacturer.WAHOO_FITNESS.value or 
+        m.manufacturer == Manufacturer.PEAKSWARE.value
+    ):
+        new_m.manufacturer = Manufacturer.GARMIN.value
+        new_m.product = GarminProduct.EDGE_830.value
+        _logger.debug("    Modifying values")
+        print_message(f"    New Record: {message_num}", new_m)
+
+    return (DefinitionMessage.from_data_message(new_m), new_m)
+
 
 def edit_fit(
     fit_path: Path, output: Optional[Path] = None, dryrun: bool = False
@@ -211,45 +250,53 @@ def edit_fit(
         _logger.error("File does not appear to be a FIT file, skipping...")
         # c.print_exception(show_locals=True)
         return None
-
     if not output:
         output = fit_path.parent / f"{fit_path.stem}_modified.fit"
 
     builder = FitFileBuilder(auto_define=True)
-    dt = None
     # loop through records, find the one we need to change, and modify the values:
     for i, record in enumerate(fit_file.records):
         message = record.message
 
         # change file id to indicate file was saved by Edge 830
         if message.global_id == FileIdMessage.ID:
+            if isinstance(message, DefinitionMessage):
+                # if this is the definition message for the FileIdMessage, skip it
+                # since we're going to write a new one
+                continue
             if isinstance(message, FileIdMessage):
-                dt = datetime.fromtimestamp(message.time_created / 1000.0)  # type: ignore
-                _logger.info(f'Activity timestamp is "{dt.isoformat()}"')
-                print_message(f"FileIdMessage Record: {i}", message)
-                if (
-                    message.manufacturer == Manufacturer.DEVELOPMENT.value
-                    or message.manufacturer == Manufacturer.ZWIFT.value
-                ):
-                    _logger.debug("    Modifying values")
-                    message.product = GarminProduct.EDGE_830.value
-                    message.manufacturer = Manufacturer.GARMIN.value
-                    print_message(f"    New Record: {i}", message)
+                # rewrite the FileIdMessage and its definition and add to builder
+                def_message, message = rewrite_file_id_message(message, i)
+                builder.add(def_message)
+                builder.add(message)
+                # also add a customized FileCreatorMessage
+                message = FileCreatorMessage()
+                message.software_version = 975
+                message.hardware_version = 255
+                builder.add(DefinitionMessage.from_data_message(message))
+                builder.add(message)
+                continue
+        
+        if message.global_id == FileCreatorMessage.ID:
+            # skip any existing file creator message
+            continue
 
         # change device info messages
         if message.global_id == DeviceInfoMessage.ID:
             if isinstance(message, DeviceInfoMessage):
                 print_message(f"DeviceInfoMessage Record: {i}", message)
                 if (
-                    message.manufacturer == Manufacturer.DEVELOPMENT.value
-                    or message.manufacturer == 0
-                    or message.manufacturer == Manufacturer.WAHOO_FITNESS.value
-                    or message.manufacturer == Manufacturer.ZWIFT.value
+                    message.manufacturer == Manufacturer.DEVELOPMENT.value or
+                    message.manufacturer == 0 or
+                    message.manufacturer == Manufacturer.WAHOO_FITNESS.value or
+                    message.manufacturer == Manufacturer.ZWIFT.value or
+                    message.manufacturer == Manufacturer.PEAKSWARE.value
                 ):
                     _logger.debug("    Modifying values")
                     message.garmin_product = GarminProduct.EDGE_830.value
                     message.product = GarminProduct.EDGE_830.value  # type: ignore
                     message.manufacturer = Manufacturer.GARMIN.value
+                    message.product_name = ""
                     print_message(f"    New Record: {i}", message)
 
         builder.add(message)

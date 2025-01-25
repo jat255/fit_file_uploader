@@ -1,6 +1,6 @@
 [project]
 name = "fit-file-faker"
-version = "1.2.1"
+version = "1.2.2"
 description = "A small tool to edit and upload FIT files to Garmin Connect"
 authors = [
   { name="Josh Taillon", email="jat255@gmail.com" },
